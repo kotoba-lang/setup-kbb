@@ -1,0 +1,12 @@
+name: self-test
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  kbb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+      - run: kbb --backend sci -e '(println (+ 1 2))' | grep -x 3
