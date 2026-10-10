@@ -12,6 +12,10 @@ inputs:
     description: kotoba-lang/org-babashka-nbb commit providing the engine's cli.js
     required: false
     default: 1675e6aab65d5a99e37840cc5012bc2eca6f4a07
+  babashka-version:
+    description: babashka release the engine resolves deps.edn dependencies with
+    required: false
+    default: 1.12.218
   node-version:
     description: Node.js version for the engine
     required: false
@@ -27,6 +31,7 @@ runs:
       env:
         KOTOBA_REF: ${{ inputs.kotoba-ref }}
         ENGINE_REF: ${{ inputs.engine-ref }}
+        BB_VERSION: ${{ inputs.babashka-version }}
       run: |
         set -euo pipefail
         root="$RUNNER_TEMP/kbb"
@@ -36,6 +41,20 @@ runs:
           git -C "$root/$1" fetch -q --depth 1 "https://github.com/kotoba-lang/$1.git" "$2"
           git -C "$root/$1" checkout -q FETCH_HEAD
         }
+        # The engine resolves deps.edn dependencies through babashka (bb), a
+        # native binary; without it every kbb -M / -Spath fails ('Command
+        # failed: bb --config ...', the first real run).
+        case "$(uname -s)-$(uname -m)" in
+          Linux-x86_64)  bbos=linux-amd64-static ;;
+          Linux-aarch64) bbos=linux-aarch64-static ;;
+          Darwin-arm64)  bbos=macos-aarch64 ;;
+          Darwin-x86_64) bbos=macos-amd64 ;;
+          *) echo "setup-kbb: no babashka build for $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+        esac
+        mkdir -p "$root/bin"
+        curl -sSfL "https://github.com/babashka/babashka/releases/download/v${BB_VERSION}/babashka-${BB_VERSION}-${bbos}.tar.gz" \
+          | tar -xz -C "$root/bin" bb
+        echo "$root/bin" >> "$GITHUB_PATH"
         fetch kotoba "$KOTOBA_REF"
         fetch org-babashka-nbb "$ENGINE_REF"
         (cd "$root/org-babashka-nbb" && npm install --ignore-scripts --no-save import-meta-resolve@4.2.0 >/dev/null)
@@ -43,4 +62,6 @@ runs:
         echo "KBB_ENGINE=$root/org-babashka-nbb/cli.js" >> "$GITHUB_ENV"
     - name: kbb is usable
       shell: bash
-      run: kbb --backend sci -e '(println "kbb ready")'
+      run: |
+        bb --version
+        kbb --backend sci -e '(println "kbb ready")'

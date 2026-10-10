@@ -10,3 +10,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./
       - run: kbb --backend sci -e '(println (+ 1 2))' | grep -x 3
+  deps:
+    # kbb -Spath resolves deps.edn through babashka; a repository with git
+    # deps exercises it (the case a plain -e does not)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+      - name: resolve and run a real suite (kotoba-lang/chain)
+        run: |
+          set -o pipefail
+          git clone -q --depth 1 https://github.com/kotoba-lang/chain "$RUNNER_TEMP/chain"
+          cd "$RUNNER_TEMP/chain"
+          kbb -M:test 2>&1 | tee kbb-test.log
+          grep -E '^kbb test: [1-9][0-9]* test\(s\), [0-9]+ pass, 0 fail, 0 error' kbb-test.log
