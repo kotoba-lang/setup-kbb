@@ -7,7 +7,7 @@ inputs:
   kotoba-ref:
     description: kotoba-lang/kotoba commit providing bin/kbb
     required: false
-    default: 36f577aeedb6789af98e0c0cf1f60bda43c5c520
+    default: a103131149afcbc785281d45c724ed8a61759826
   engine-ref:
     description: kotoba-lang/org-babashka-nbb commit providing the engine's cli.js
     required: false

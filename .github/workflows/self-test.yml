@@ -10,6 +10,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./
       - run: kbb --backend sci -e '(println (+ 1 2))' | grep -x 3
+      - name: KBB_NODE_FLAGS reaches node (kotoba#636)
+        run: |
+          printf '%s\n' '(defn f [n] (if (zero? n) 0 (inc (f (dec n)))))' \
+            '(println (try (f 20000) (catch :default _ "overflow")))' > "$RUNNER_TEMP/deep.cljs"
+          kbb "$RUNNER_TEMP/deep.cljs" | grep -x overflow
+          KBB_NODE_FLAGS=--stack-size=7000 kbb "$RUNNER_TEMP/deep.cljs" | grep -x 20000
   deps:
     # kbb -Spath resolves deps.edn through babashka; a repository with git
     # deps exercises it (the case a plain -e does not)
